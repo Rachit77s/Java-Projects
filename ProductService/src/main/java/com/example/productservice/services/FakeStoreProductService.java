@@ -3,6 +3,7 @@ package com.example.productservice.services;
 import com.example.productservice.dtos.GenericProductDto;
 import com.example.productservice.exceptions.NotFoundException;
 import com.example.productservice.models.Product;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +21,19 @@ import java.util.List;
 public class FakeStoreProductService implements IProductService {
 
     private RestTemplateBuilder restTemplateBuilder;
-    private String specificProductRequestUrl = "https://fakestoreapi.com/products/{id}";
-    private String productRequestBaseUrl = "https://fakestoreapi.com/products";
+    private String specificProductRequestUrl;// = "https://fakestoreapi.com/products/{id}";
+    private String productRequestBaseUrl;// = "https://fakestoreapi.com/products";
 
-    public FakeStoreProductService(RestTemplateBuilder restTemplateBuilder) {
+
+    // private String productRequestBaseUrl = fakeStoreApiUrl + fakeStoreProductApiPath;
+    // private String specificProductRequestUrl = fakeStoreApiUrl + fakeStoreProductApiPath + "/{id}";
+
+    public FakeStoreProductService(RestTemplateBuilder restTemplateBuilder,
+                                   @Value("${fakestore.api.url}") String fakeStoreApiUrl,
+                                   @Value("${fakestore.api.paths.product}") String fakeStoreProductApiPath) {
         this.restTemplateBuilder = restTemplateBuilder;
+        productRequestBaseUrl = fakeStoreApiUrl + fakeStoreProductApiPath;
+        specificProductRequestUrl = fakeStoreApiUrl + fakeStoreProductApiPath + "/{id}";
     }
 
     private GenericProductDto MapToGenericProductDto(GenericProductDto genericProductDto)
@@ -41,6 +50,19 @@ public class FakeStoreProductService implements IProductService {
     }
 
     @Override
+    public List<GenericProductDto> getAllProducts() {
+        RestTemplate restTemplate = restTemplateBuilder.build();
+        ResponseEntity<GenericProductDto[]> response = restTemplate.getForEntity(productRequestBaseUrl, GenericProductDto[].class);
+
+        List<GenericProductDto> ans = new ArrayList<>();
+        for (GenericProductDto genericProductDto : Arrays.stream(response.getBody()).toList()) {
+            GenericProductDto product = MapToGenericProductDto(genericProductDto);
+            ans.add(product);
+        };
+        return  ans;
+    }
+
+    @Override
     public GenericProductDto getProductById(Long id) throws NotFoundException {
         RestTemplate restTemplate = restTemplateBuilder.build();
         ResponseEntity<GenericProductDto> response = restTemplate.getForEntity(specificProductRequestUrl, GenericProductDto.class, id);
@@ -54,22 +76,9 @@ public class FakeStoreProductService implements IProductService {
 
     public GenericProductDto createProduct(GenericProductDto productDto) {
         RestTemplate restTemplate = restTemplateBuilder.build();
-        ResponseEntity<GenericProductDto> response = restTemplate.postForEntity(productRequestBaseUrl, productDto ,GenericProductDto.class);
+        ResponseEntity<GenericProductDto> response = restTemplate.postForEntity(productRequestBaseUrl, productDto, GenericProductDto.class);
 
         return response.getBody();
-    }
-
-    @Override
-    public List<GenericProductDto> getAllProducts() {
-        RestTemplate restTemplate = restTemplateBuilder.build();
-        ResponseEntity<GenericProductDto[]> response = restTemplate.getForEntity(productRequestBaseUrl, GenericProductDto[].class);
-
-        List<GenericProductDto> ans = new ArrayList<>();
-        for (GenericProductDto genericProductDto : Arrays.stream(response.getBody()).toList()) {
-            GenericProductDto product = MapToGenericProductDto(genericProductDto);
-            ans.add(product);
-        };
-        return  ans;
     }
 
     @Override
